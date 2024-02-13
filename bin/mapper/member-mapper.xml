@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+  
+  <!-- 네임스페이스는 테이블명으로 정한다. -->
+<mapper namespace="member">
+    <cache />
+    
+    <!-- resultType이 원시 기본타입일 경우 지정하지 않아도 마이바티즈 내부에서 알아서 처리한다. -->
+    <!-- 나중에 자바 클래스의 메소드로 호출할 경우 메소드명과 id명을 같게 하면 코드의 가독성이 좋아진다. -->
+    
+    <!-- Step20 -->
+    <!-- resultType을 mDTO로 작성할 수 있는 이유는 mybatis-config.xml에서 typeAlias 설정을 했기 때문이다. -->
+    <insert id="save" parameterType="mDTO">
+        insert into member (memberid,name,pw,phone,email,regtime) 
+        values (#{memberid},#{name},#{pw},#{phone},#{email},#{regtime});
+    </insert>
+  
+    
+    <!-- Step30 -->
+    <update id="update" parameterType="mDTO">
+        update member set 
+            name = #{name},
+            pw = #{pw},  
+            phone = #{phone},
+            email = #{email}
+        <where>
+            <if test="memberid!=null">
+                memberid = #{memberid}            
+            </if>
+        </where>
+    </update>
+    
+    
+    <!-- Step40 -->
+    <delete id="deleteById">
+        delete from member where memberid = #{memberid}
+    </delete>
+    
+    
+    <sql id="BaseColumns">
+        memberid, name, pw, phone, email, regtime 
+    </sql>
+    
+    
+    <!--  Step50 -->
+    <select id="getOne" resultType="mDTO">
+        select 
+            <include refid="BaseColumns" />
+        from member 
+        <where>
+            <if test="memberid != null">
+                memberid = #{memberid}
+            </if>
+        </where> 
+    </select>
+    
+    <!-- Step60 -->
+    <select id="countById" resultType="int">
+        select count(memberid) from member;
+    </select>
+    
+    <!-- Step70 -->
+    <select id="findAll" resultType="mDTO">
+        select 
+            <include refid="BaseColumns" /> 
+        from member
+    </select>
+    
+    <!-- Step80-1 -->
+    <select id="pagingList_list" resultType="mDTO">
+        select 
+            <include refid="BaseColumns" /> 
+        from member order by regtime desc limit
+        <!-- collection : 리스트 파라미터를 직접 넘겼을 경우 list -->
+        <foreach collection="list" item="num" separator=",">
+            #{num}
+        </foreach>        
+    </select>
+    
+    <!-- Step80-2 -->
+    <select id="pagingList_mapList" resultType="mDTO">
+        select 
+            <include refid="BaseColumns" /> 
+        from member order by regtime desc limit
+        
+        <!-- collection : 리스트 파라미터를 Map을 통해 넘겼을 경우 반드시 맵의 key값과 동일하게 작성한다. -->
+        <foreach collection="listLimit" item="num" separator=",">
+            #{num}
+        </foreach>        
+    </select>
+    
+    <!-- Step80-3 -->
+    <!-- 파라미터 타입은 Array라고 하는게 아니라 배열에 들어갈 데이터타입을 작성하거나, 아예 생략할 수 있다. -->
+    <select id="pagingList_array" resultType="mDTO" parameterType="int">
+        select 
+            <include refid="BaseColumns" /> 
+        from member order by regtime desc limit
+        
+        <!-- collection : 배열 파라미터를 직접 넘겼을 경우 array -->
+        <foreach collection="array" item="num" separator=",">
+            #{num}
+        </foreach>        
+    </select>
+    
+    <!-- Step80-4 -->
+    <select id="pagingList_mapArray" resultType="mDTO">
+        select 
+            <include refid="BaseColumns" /> 
+        from member order by regtime desc limit
+        <foreach collection="arrLimit" item="num" separator=",">
+            #{num}
+        </foreach>        
+    </select>
+    
+    <!-- Step80-5 -->
+    <select id="selectMulty" resultType="mDTO">
+        <!-- 쿼리문에 Binary를 앞에 써주면, 대소문자를 구분해준다. -->
+        select 
+            <include refid="BaseColumns" /> 
+        from member where Binary memberid in
+        <foreach collection="array" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>        
+    </select>
+    
+    
+    <!-- Step90-1 -->
+    <!-- 직접 테이블의 필드명과 값을 저장한 Map 객체를 통해 검색하기 --> 
+    <select id="searchMap" resultType="mDTO">
+        select 
+            <include refid="BaseColumns" /> 
+        from member 
+        <where>
+            <if test="field != null">
+                ${field} like #{value}
+            </if>
+        </where> 
+    </select>
+    
+    <!-- Step90-2 -->
+    <!-- DTO 객체를 이용해 검색하기 -->
+    <select id="searchDTO" parameterType="mDto" resultType="mDto">
+        select <include refid="BaseColumns" /> from member where 
+        <choose>
+            <when test="name!=null">
+                name like concat('%',#{name},'%')
+            </when>
+		     <when test="email != null" >
+		      email like concat('%' , #{email}, '%')
+		     </when>    
+		     <when test="phone != null" >
+		      phone like concat('%' , #{phone}, '%')
+		     </when>      
+		     <when test="memberid != null" >
+		      memberid like concat('%' , #{memberid}, '%')
+		     </when>            
+        </choose>
+    </select>
+    
+    
+    
+    <!-- 자주 사용하는 구문을 부품으로 등록하여 활용하기 -->
+    <sql id="main_sql">select * from member</sql>
+    <sql id="where_sql">where memberid = #{memberid}</sql>
+    
+    <!-- Step91 -->
+    <select id="sql_include" parameterType="mDto" resultType="mDto">
+        <include refid="main_sql" />
+        <include refid="where_sql" />
+    </select>
+    
+    
+    
+    
+    <!-- Step95 -->
+    <!-- 
+	     조인으로 나오는 결과 컬럼명은 기존의 자바모델클래스의 필드명과 대게 다르므로 별도로 클래스를 정의해 줘야 한다.
+	     이렇게 정의한 모델클래스를 사용하는 결과 매핑인 resultMap을 아래와 같이 정의한다.
+	     특히, jdbcType의 값은 enum 상수값이므로 반드시 대문자로 작성해야 한다. 
+	     ※ 에이콘 마이바티즈 프로그래밍 p156 참조
+     -->
+    <resultMap id="EmployeeResultMap" type="model.Employee">
+        <result column="first_name" property="firstName" jdbcType="VARCHAR" />
+        <result column="department_id" property="departmentId" jdbcType="INTEGER" />
+        <result column="department_name" property="departmentName" jdbcType="VARCHAR" />
+    </resultMap>
+    
+    <select id="sql_join" parameterType="int" resultMap="EmployeeResultMap">
+      select e.first_name, e.department_id, d.department_name
+      from employees e inner join departments d 
+      on e.department_id = d.department_id 
+      where e.salary >= #{salary};
+    </select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
